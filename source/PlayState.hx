@@ -250,7 +250,6 @@ class PlayState extends MusicBeatState
 
 	private var allUIs:Array<FlxCamera> = [];
 	public static var uiHUD:HUD;
-	private var zoomOffset:Float = 0;
 
 	override public function create()
 	{
@@ -260,7 +259,6 @@ class PlayState extends MusicBeatState
 
 		PauseSubState.songName = null; // Reset to default
 		Conductor.recalculateTimings();
-		GameOverSubstate.resetVariables();
 		var stageData = setupStageData(Paths.formatToSongPath(SONG.song));
 
 		//wtf dwag
@@ -285,12 +283,11 @@ class PlayState extends MusicBeatState
 
 		practiceMode = false;
 		camGame = new FlxCamera();
-		camHUD = new FlxCamera();
-		camOther = new FlxCamera();
-		camHUD.bgColor.alpha = 0;
-		camOther.bgColor.alpha = 0;
-
 		FlxG.cameras.reset(camGame);
+		FlxCamera.defaultCameras = [camGame];
+
+		camHUD = new FlxCamera();
+		camHUD.bgColor.alpha = 0;
 		FlxG.cameras.add(camHUD);
 		allUIs.push(camHUD);
 
@@ -324,9 +321,9 @@ class PlayState extends MusicBeatState
 		allUIs.push(hudcam);
 		FlxG.cameras.add(hudcam);
 
+		camOther = new FlxCamera();
+		camOther.bgColor.alpha = 0;
 		FlxG.cameras.add(camOther);
-
-		FlxCamera.defaultCameras = [camGame];
 		CustomFadeTransition.nextCamera = camOther;
 
 		persistentUpdate = true;
@@ -2308,13 +2305,13 @@ class PlayState extends MusicBeatState
 			// foreer stuff
 			if (SaveData.get(SMOOTH_CAMERA_ZOOMS))
 			{
-				FlxG.camera.zoom = FlxMath.lerp(defaultCamZoom + zoomOffset, FlxG.camera.zoom,  CoolUtil.boundTo(1 - (elapsed * 3.125), 0, 1));
+				FlxG.camera.zoom = FlxMath.lerp(defaultCamZoom, FlxG.camera.zoom, CoolUtil.boundTo(1 - (elapsed * 3.125), 0, 1));
 				for (hud in allUIs)
 					hud.zoom = FlxMath.lerp(1, hud.zoom, CoolUtil.boundTo(1 - (elapsed * 3.125), 0, 1));
 			}
 			else
 			{
-				FlxG.camera.zoom = FlxMath.lerp(defaultCamZoom + zoomOffset, FlxG.camera.zoom, 0.95);
+				FlxG.camera.zoom = FlxMath.lerp(defaultCamZoom, FlxG.camera.zoom, 0.95);
 				for (hud in allUIs)
 					hud.zoom = FlxMath.lerp(1, hud.zoom, 0.95);
 			}
@@ -3208,10 +3205,9 @@ class PlayState extends MusicBeatState
 
 		if (combo >= 1000)
 			seperatedScore.push(Math.floor(combo / 1000) % 10);
-		if (combo >= 100)
-			seperatedScore.push(Math.floor(combo / 100) % 10);
-		if (combo >= 10)
-			seperatedScore.push(Math.floor(combo / 10) % 10);
+
+		seperatedScore.push(Math.floor(combo / 100) % 10);
+		seperatedScore.push(Math.floor(combo / 10) % 10);
 		seperatedScore.push(combo % 10);
 
 		var daLoop:Int = 0;
@@ -4320,14 +4316,15 @@ class PlayState extends MusicBeatState
 
 			if (SONG.notes[curSection].changeBPM)
 			{
-				// var lastBPM = Conductor.bpm;
 				Conductor.changeBPM(SONG.notes[curSection].bpm);
 
 				if (songSpeedType == "constant")
 					return;
+
+				/* shit needs to imrpvoe, disabled for now
 				var baseSpeed = SONG.speed * SaveData.getGameplaySetting('scrollspeed', 1);
-				var newSpeed = baseSpeed + (baseSpeed * ((Conductor.bpm / SONG.bpm) / 10));
-				songSpeed = newSpeed;
+				var newSpeed = baseSpeed + (((Conductor.bpm / 60) / songSpeed) * (Conductor.stepCrochet / 1000));
+				songSpeed = newSpeed;*/
 			}
 		}
 	}
@@ -4396,7 +4393,7 @@ class PlayState extends MusicBeatState
 	}
 
 	// no way is this from sonic.exe v2.5?????¿?¿?!?!?!??!?=?=?=?!?!1
-	var camDisp:Float = 8;
+	var camDisp:Float = 10;
 
 	function cameraDisplacement(character:Character, mustHit:Bool)
 	{
@@ -4423,7 +4420,7 @@ class PlayState extends MusicBeatState
 							case 'singRIGHT':
 								camDisplaceX += camDisp;
 
-							// funky - move to the opposite direction as it missed, would be cool to get the note direction to move in that direction lol
+							// funky - move to the opposite direction as it missed
 							case 'singUPmiss':
 								camDisplaceY += camDisp;
 							case "singDOWNmiss":
@@ -4454,7 +4451,6 @@ class PlayState extends MusicBeatState
 
 			camFollow.x += camDisplaceX + char.cameraPosition[0] + opponentCameraOffset[0];
 			camFollow.y += camDisplaceY + char.cameraPosition[1] + opponentCameraOffset[1];
-			zoomOffset = char.zoomOffset;
 		}
 		else
 		{
@@ -4467,8 +4463,6 @@ class PlayState extends MusicBeatState
 
 			camFollow.x += camDisplaceX - char.cameraPosition[0] + boyfriendCameraOffset[0];
 			camFollow.y += camDisplaceY + char.cameraPosition[1] + boyfriendCameraOffset[1];
-
-			zoomOffset = char.zoomOffset;
 		}
 	}
 
@@ -4506,7 +4500,7 @@ class PlayState extends MusicBeatState
 			CoolUtil.precacheSound('missnote2');
 			CoolUtil.precacheSound('missnote3');
 		}
-	
+
 		if (Std.parseInt(SaveData.get(HITSOUND_VOL)) > 0)
 			CoolUtil.precacheSound('hitsound');
 
@@ -4517,17 +4511,8 @@ class PlayState extends MusicBeatState
 
 		if (!SaveData.get(USE_CLASSIC_COMBOS))
 		{
-			var path = Paths.getLibraryPath('${SaveData.get(RATINGS_STYLE)}/judgements${isPixelStage ? "-pixel" : ""}.png', "UILib");
-			if (!Assets.exists(path))
-				path = path.replace('-pixel', "");
-	
-			Paths.getGraphic(path);
-
-			var path = Paths.getLibraryPath('${SaveData.get(COMBOS_STYLE)}/combo${isPixelStage ? "-pixel" : ""}.png', "UILib");
-			if (!Assets.exists(path))
-				path = path.replace('-pixel', "");
-
-			Paths.getGraphic(path);
+			Ratings.generateCombo("0", true, isPixelStage, false, createdColor, 0);
+			Ratings.generateRating("sick", true, "late", isPixelStage);
 		}
 	}
 
@@ -4562,7 +4547,7 @@ class PlayState extends MusicBeatState
 			combo = 0;
 		else
 			if (!SaveData.get(USE_CLASSIC_COMBOS))
-				combo--;
+			combo--;
 
 		if (!practiceMode)
 			songScore -= 5;
@@ -4601,6 +4586,8 @@ class PlayState extends MusicBeatState
 
 	function setupStageData(songName:String):StageFile
 	{
+		GameOverSubstate.resetVariables();
+
 		curStage = PlayState.SONG.stage;
 		if (PlayState.SONG.stage == null || PlayState.SONG.stage.length < 1)
 		{

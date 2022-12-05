@@ -44,11 +44,11 @@ class NoteSplash extends FlxSprite
 		if (textureLoaded != texture)
 		{
 			loadAnims(texture);
+			setOffsets(texture);
 		}
 		colorSwap.hue = hueColor;
 		colorSwap.saturation = satColor;
 		colorSwap.brightness = brtColor;
-		offset.set(-26.2, -17);
 	}
 
 	public function playAnim(note:Int = 0)
@@ -60,16 +60,26 @@ class NoteSplash extends FlxSprite
 			animation.curAnim.frameRate = 24 + FlxG.random.int(-2, 2);
 	}
 
+	// will implement a check soon (if the anim is uh psych or engine)
 	function loadAnims(skin:String)
 	{
-		frames = Paths.getSparrowAtlas(skin);
-		for (i in 1...3)
+		var check:Dynamic = NoteUtils.noteSplashNullCheck(skin);
+		if (check[0] != "ext") // dumbass
 		{
-			animation.addByPrefix("note1-" + i, "note impact " + i + " blue", 24, false);
-			animation.addByPrefix("note2-" + i, "note impact " + i + " green", 24, false);
-			animation.addByPrefix("note0-" + i, "note impact " + i + " purple", 24, false);
-			animation.addByPrefix("note3-" + i, "note impact " + i + " red", 24, false);
+			frames = Paths.getSparrowAtlas(check);
+			NoteUtils.setSplashAnims(this);
 		}
+		else
+		{
+			frames = check[1];
+			NoteUtils.setPSplashAnims(this); // forced, probably the universal is the psych anims
+		}
+	}
+
+	function setOffsets(skin:String)
+	{
+		var offsets = NoteUtils.getNoteSplashOffset(skin);
+		offset.set(offsets[1], offsets[2]);
 	}
 
 	override function update(elapsed:Float)
