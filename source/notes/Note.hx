@@ -42,7 +42,6 @@ class Note extends FlxSprite
 	public var gfNote:Bool = false;
 	public var earlyHitMult:Float = 0.5;
 	public var lateHitMult:Float = 1;
-	public var lowPriority:Bool = false;
 
 	public var noteSplashDisabled:Bool = false;
 	public var noteSplashTexture:String = null;
@@ -54,7 +53,6 @@ class Note extends FlxSprite
 	public var offsetY:Float = 0;
 	public var offsetAngle:Float = 0;
 	public var multAlpha:Float = 1;
-	public var multSpeed(default, set):Float = 1;
 
 	public var copyX:Bool = true;
 	public var copyY:Bool = true;
@@ -63,7 +61,6 @@ class Note extends FlxSprite
 
 	public var hitHealth:Float = 0.023;
 	public var missHealth:Float = 0.0475;
-	public var ratingDisabled:Bool = false;
 
 	public var texture(default, set):String = null;
 
@@ -74,12 +71,8 @@ class Note extends FlxSprite
 	public var isLiftNote:Bool = false;
 	public var isPixel:Bool = false;
 
-	private function set_multSpeed(value:Float):Float
-	{
-		resizeByRatio(value / multSpeed);
-		multSpeed = value;
-		return value;
-	}
+	public var parentNote:Note;
+	public var childrenNotes:Array<Note> = [];
 
 	public function resizeByRatio(ratio:Float)
 	{
@@ -199,6 +192,16 @@ class Note extends FlxSprite
 		else if (!isSustainNote)
 			earlyHitMult = 1;
 		x += offsetX;
+
+		if (isSustainNote && prevNote != null)
+		{
+			parentNote = prevNote;
+			while (parentNote.parentNote != null)
+				parentNote = parentNote.parentNote;
+			parentNote.childrenNotes.push(this);
+		}
+		else if (!isSustainNote)
+			parentNote = null;
 	}
 
 	public var lastNoteOffsetXForPixelAutoAdjusting:Float = 0;
@@ -317,7 +320,7 @@ class Note extends FlxSprite
 			}
 			else
 			{
-				if (strumTime > Conductor.songPosition - Conductor.safeZoneOffset
+				if (strumTime > Conductor.songPosition - (Conductor.safeZoneOffset * lateHitMult)
 					&& strumTime < Conductor.songPosition + (Conductor.safeZoneOffset * earlyHitMult))
 					canBeHit = true;
 				else
@@ -331,12 +334,12 @@ class Note extends FlxSprite
 		{
 			canBeHit = false;
 
-			if (strumTime <= Conductor.songPosition + (Conductor.safeZoneOffset * earlyHitMult))
+			if (strumTime < Conductor.songPosition + (Conductor.safeZoneOffset * earlyHitMult))
 				if ((isSustainNote && prevNote.wasGoodHit) || strumTime <= Conductor.songPosition)
 					wasGoodHit = true;
 		}
 
-		if (tooLate && !inEditor)
+		if (tooLate && !inEditor || (parentNote != null && parentNote.tooLate))
 		{
 			if (alpha > 0.3)
 				alpha = 0.3;

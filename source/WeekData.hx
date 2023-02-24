@@ -44,7 +44,7 @@ class WeekData
 	public var hideStoryMode:Bool;
 	public var hideFreeplay:Bool;
 	public var difficulties:String;
-	public var internal:Bool; // meant only for 
+	public var internal:Bool; // meant only for internal usage
 
 	public var fileName:String;
 
@@ -101,7 +101,6 @@ class WeekData
 		// dumb ass support lol
 		if (SaveData.get(ALLOW_FILESYS) && !SaveData.get(OLD_SONG_SYSTEM))
 		{
-			reloadFromAssets(isStoryMode);
 			var weekFiles = features.StorageAccess.getWeekFiles();
 			var weekNames = features.StorageAccess.getWeekNames();
 			if (weekNames != null && weekFiles != null)
@@ -130,30 +129,33 @@ class WeekData
 		#end
 	}
 
+	// me when spend half an hour trying to fix path issue while library :troll:
 	private static function reloadFromAssets(isStoryMode:Null<Bool> = false)
 	{
-		var directories:Array<String> = [Paths.getPreloadPath()];
-
-		var sexList:Array<String> = CoolUtil.coolTextFile(Paths.getPreloadPath('weeks/weekList.txt'));
-		for (i in 0...sexList.length)
+		// smartass code
+		var weeks:Array<String> = Assets.getLibrary("weeks").list(null);
+		for (i in 0...weeks.length)
 		{
-			for (j in 0...directories.length)
+			if (weeks[i].endsWith(".json"))
 			{
-				var fileToCheck:String = directories[j] + 'weeks/' + sexList[i] + '.json';
-				if (!weeksLoaded.exists(sexList[i]))
+				// i wanna kill myself - shitty ass fix but order might be incorrect if the tutorial.json doesnt exists :(
+				var weekName:String = (weeks.contains("assets/weeks/tutorial.json") ? 
+					(i == 0 ? "tutorial" : 'week$i') : weeks[i].replace('assets/weeks/', "").replace(".json", ""));
+
+				if (!weeksLoaded.exists(weekName))
 				{
-					var week:WeekFile = getWeekFile(fileToCheck);
+					var weekPath:String = Paths.getLibraryPath('$weekName.json', "weeks");
+					var week:WeekFile = getWeekFile(weekPath);
 					if (week != null)
 					{
-						var weekFile:WeekData = new WeekData(week, sexList[i]);
-
+						var weekFile:WeekData = new WeekData(week, weekName);
 						if (weekFile != null
 							&& (isStoryMode == null
 								|| (isStoryMode && !weekFile.hideStoryMode)
 								|| (!isStoryMode && !weekFile.hideFreeplay)))
 						{
-							weeksLoaded.set(sexList[i], weekFile);
-							weeksList.push(sexList[i]);
+							weeksLoaded.set(weekName, weekFile);
+							weeksList.push(weekName);
 						}
 					}
 				}

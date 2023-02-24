@@ -97,10 +97,12 @@ class HUD extends FlxTypedGroup<FlxBasic>
 
         iconP1 = new HealthIcon(iconP1Det.name, true);
         iconP1.y = healthBar.y - (iconP1.height / 2);
+        iconP1.visible = !hideHud;
         add(iconP1);
 
         iconP2 = new HealthIcon(iconP2Det.name, false);
         iconP2.y = healthBar.y - (iconP2.height / 2);
+        iconP2.visible = !hideHud;
         add(iconP2);
         reloadHealthBarColors(iconP1Det, iconP2Det);
 
@@ -111,7 +113,7 @@ class HUD extends FlxTypedGroup<FlxBasic>
         scoreTxt.visible = !hideHud;
         add(scoreTxt);
 
-        botPlayTxt = new FlxText(400, 100 + (SaveData.get(DOWN_SCROLL) ? FlxG.height - 150 : 0), FlxG.width - 800, "BOTPLAY", 32);
+        botPlayTxt = new FlxText(400, 100 + (SaveData.get(DOWN_SCROLL) ? FlxG.height - 220 : 0), FlxG.width - 800, "BOTPLAY", 32);
 		botPlayTxt.setFormat(curFont, 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		botPlayTxt.scrollFactor.set();
 		botPlayTxt.borderSize = 1.25;
@@ -160,7 +162,7 @@ class HUD extends FlxTypedGroup<FlxBasic>
 
     override public function update(elapsed:Float)
     {
-        scoreTxt.text = getScoreFormat();
+        scoreTxt.text = updateScore();
         healthBar.value = PlayState.instance.health;
 
         if (botPlayTxt.visible)
@@ -193,14 +195,14 @@ class HUD extends FlxTypedGroup<FlxBasic>
 			iconP2.animation.curAnim.curFrame = 0;
     }
 
-    private function getScoreFormat():String
+    public function updateScore():String
     {
         // :P
         var songScore = PlayState.instance.songScore;
         var songMisses = PlayState.instance.songMisses;
         var ratingString = PlayState.instance.ratingString;
         var ratingFC = PlayState.instance.ratingFC;
-        var ratingPercent = PlayState.instance.ratingPercent;
+        var ratingPercent = Highscore.floorDecimal(PlayState.instance.ratingPercent * 100, 2);
 
         switch (SaveData.get(SCORE_TEXT_STYLE))
 		{
@@ -211,7 +213,7 @@ class HUD extends FlxTypedGroup<FlxBasic>
 				}
 				else
 				{
-					return 'Score: $songScore • Accuracy: ${Highscore.floorDecimal(ratingPercent * 100, 2)}% [$ratingFC] • Combo Breaks: $songMisses • Rank: $ratingString';
+					return 'Score: $songScore • Accuracy: $ratingPercent% [$ratingFC] • Combo Breaks: $songMisses • Rank: $ratingString';
 				}
 			case 'Engine':
 				if (ratingString == 'N/A')
@@ -220,7 +222,7 @@ class HUD extends FlxTypedGroup<FlxBasic>
 				}
 				else
 				{
-					return 'Score: $songScore | Misses: $songMisses | Accuracy: ${Highscore.floorDecimal(ratingPercent * 100, 2)}% | $ratingString ($ratingFC)';
+					return 'Score: $songScore | Misses: $songMisses | Accuracy: $ratingPercent% | $ratingString ($ratingFC)';
 				}
 			case 'Psych':
 				if (ratingString == '?')
@@ -229,10 +231,10 @@ class HUD extends FlxTypedGroup<FlxBasic>
 				}
 				else
 				{
-					return 'Score: $songScore | Misses: $songMisses | Rating: $ratingString (${Highscore.floorDecimal(ratingPercent * 100, 2)}%) - $ratingFC';
+					return 'Score: $songScore | Misses: $songMisses | Rating: $ratingString ($ratingPercent%) - $ratingFC';
 				}
 		}
-		return "";
+        return "";
     }
 
     // stuff from forever lol 

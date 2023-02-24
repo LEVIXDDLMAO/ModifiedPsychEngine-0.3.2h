@@ -23,7 +23,6 @@ import sys.io.File;
 class StorageAccess
 {
 	public static var checkDirs:Map<String, String> = new Map();
-	public static var currentTrackedAssets:Map<String, FlxGraphic> = new Map();
 	//public static var currentTrackedSounds:Map<String, Sound> = new Map();
 
 	public static function checkStorage()
@@ -180,13 +179,14 @@ class StorageAccess
 	public static function getGraphic(file:String)
 	{
 		#if STORAGE_ACCESS
-		if (!currentTrackedAssets.exists(file))
+		if (!Paths.currentTrackedAssets.exists(file))
 		{
 			var newBitmap:BitmapData = BitmapData.fromFile(file);
 			var newGraphic:FlxGraphic = FlxGraphic.fromBitmapData(newBitmap, false, file);
-			currentTrackedAssets.set(file, newGraphic);
+			Paths.currentTrackedAssets.set(file, newGraphic);
 		}
-		return currentTrackedAssets.get(file);
+		Paths.localTrackedAssets.push(file);
+		return Paths.currentTrackedAssets.get(file);
 		#end
 	}
 
@@ -235,34 +235,23 @@ class StorageAccess
 		#if STORAGE_ACCESS
 		var arrowPath = makePath(IMAGES, '$texture.png');
 		var xmlArrowPath = makePath(IMAGES, '$texture.xml');
+		var arrowPixPath = makePath(IMAGES, '${texture}${isSustain ? "ENDS" : ""}-pixel.png');
 
-		if (exists(arrowPath))
+		if (exists(arrowPath) && isPixel == false)
 		{
-			if (exists(xmlArrowPath) && isPixel == false)
+			if (exists(xmlArrowPath))
 			{
 				var graphic = getGraphic(arrowPath);
 				var frames = FlxAtlasFrames.fromSparrow(graphic, File.getContent(xmlArrowPath));
 				return frames;
 			}
-			else if ((!exists(xmlArrowPath) || exists(xmlArrowPath)) && isPixel == true)
-			{
-				if (isSustain)
-				{
-					var arrowPixNote = makePath(IMAGES, '${texture}ENDS-pixel.png');
-					if (exists(arrowPixNote))
-						return getGraphic(arrowPixNote);
-					else
-						return null;
-				}
-				else
-				{
-					var arrowPixNote = makePath(IMAGES, '$texture-pixel.png');
-					if (exists(arrowPixNote))
-						return getGraphic(arrowPixNote);
-					else
-						return null;
-				}
-			}
+			else
+				return null;
+		}
+		else if (exists(arrowPixPath) && isPixel == true)
+		{
+			if (exists(arrowPixPath))
+				return getGraphic(arrowPixPath);
 			else
 				return null;
 		}
